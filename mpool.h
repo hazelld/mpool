@@ -4,7 +4,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-
+#include <stdio.h> // temp
 
 #ifdef _WIN32
 #	warn No multi-threaded support currently
@@ -37,7 +37,7 @@ struct mpool;
 
 mpool_error init_mpool (size_t block_size, int32_t capacity, struct mpool** pool);
 
-mpool_error mpool_alloc (void** item, struct mpool* pool);
+void* mpool_alloc (struct mpool* pool, mpool_error* error);
 
 mpool_error mpool_dealloc (void* item, struct mpool* pool);
 

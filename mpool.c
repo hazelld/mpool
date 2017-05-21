@@ -205,20 +205,27 @@ mpool_error init_mpool (size_t block_size, int32_t capacity, struct mpool** pool
 }
 
 
-mpool_error mpool_alloc (void** item, struct mpool* pool) 
+void* mpool_alloc (struct mpool* pool, mpool_error* error) 
 {
 	struct _block* b;
 	mpool_error err = MPOOL_SUCCESS;
 	
-	if (item == NULL || pool == NULL) 
-		return MPOOL_ERR_NULL_ARG;
+	if (pool == NULL) {
+		err = MPOOL_ERR_NULL_ARG;
+		goto cleanup;
+	}
 
-	if ((err = _remove_block(&b, pool)) != MPOOL_SUCCESS)
-		return err;
+	if ((err = _remove_block(&b, pool)) != MPOOL_SUCCESS) 
+		goto cleanup;
 	
-	*item = b->addr;
+	void* item = b->addr;
 	err = _add_to_unused_list(b, pool);
-	return err;
+
+cleanup:
+	if (error != NULL)
+		*error = err;
+	
+	return item;
 }
 
 
@@ -245,23 +252,26 @@ mpool_error mpool_realloc (int32_t new_capacity, struct mpool* pool)
 
 	if (pool == NULL) 
 		return MPOOL_ERR_NULL_ARG;
+
 	if (pool->capacity >= new_capacity)
 		return MPOOL_ERR_INVALID_REALLOC_SIZE;
 	
 	int32_t extra = new_capacity - pool->capacity;
 	size_t new_size = extra * pool->block_size;
-	
-	pool->blobs = realloc(pool->blobs, sizeof(void*) * ++pool->alloc_count);
+	int index = pool->alloc_count++;
+	pool->capacity = new_capacity;
+
+	pool->blobs = realloc(pool->blobs, sizeof(void*) * pool->alloc_count);
 	if (pool->blobs == NULL) return MPOOL_ERR_ALLOC;
 
-	pool->blobs[pool->alloc_count - 1] = malloc(new_size);
-	if (pool->blobs[pool->alloc_count - 1] == NULL) return MPOOL_ERR_ALLOC;
+	pool->blobs[index] = malloc(new_size);
+	if (pool->blobs[index] == NULL) return MPOOL_ERR_ALLOC;
 
 	pool->blob_sizes = realloc(pool->blob_sizes, sizeof(size_t) * pool->alloc_count);
 	if (pool->blob_sizes == NULL) return MPOOL_ERR_ALLOC;
 
-	pool->blob_sizes[pool->alloc_count] = new_size;
-	err = _partition_blob(pool, pool->alloc_count);
+	pool->blob_sizes[index] = new_size;
+	err = _partition_blob(pool, index);
 	return err;
 }
 

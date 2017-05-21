@@ -9,15 +9,15 @@ struct test_struct {
 	int field2;
 };
 
-void init_struct (struct test_struct* ts) 
+void init_struct (struct test_struct* ts, int v) 
 {
-	ts->field1 = 1;
-	ts->field2 = 2;
+	ts->field1 = v;
+	ts->field2 = v;
 }
 
 int main(void) 
 {
-	void* data_arr[100];
+	struct test_struct* data_arr[200];
 	struct mpool* pool = NULL;
 	mpool_error err;
 
@@ -25,11 +25,11 @@ int main(void)
 	assert(err == MPOOL_SUCCESS);
 
 	for (int i = 0; i < 50; i++) {
-		void* data;
-		err = mpool_alloc(&data, pool);
+		struct test_struct* data;
+		data = (struct test_struct*)mpool_alloc(pool, &err);
 		assert(err == MPOOL_SUCCESS);
 		data_arr[i] = data;
-		init_struct(data_arr[i]);
+		init_struct(data_arr[i], i);
 		struct test_struct* tes = (struct test_struct*)data_arr[i];
 		printf("%d --- %d\n", tes->field1, tes->field2); 
 	}
@@ -40,18 +40,37 @@ int main(void)
 	}
 
 	for (int i = 25; i < 100; i++) {
-		void* data;
-		err = mpool_alloc(&data, pool);
+		struct test_struct* data;
+		data = (struct test_struct*)mpool_alloc(pool, &err);
 		assert(err == MPOOL_SUCCESS);
 		data_arr[i] = data;
-		init_struct(data_arr[i]);
-		struct test_struct* tes = (struct test_struct*)data_arr[i];
+		init_struct(data_arr[i], i);
+		struct test_struct* tes = data_arr[i];
 		printf("%d --- %d\n", tes->field1, tes->field2); 
 	}
 
 	for (int i = 0; i < 100; i++) {
 		err = mpool_dealloc(data_arr[i], pool);
 		assert(err == MPOOL_SUCCESS);
+	}
+
+	err = mpool_realloc(200, pool);
+	printf("%d\n", err);
+	assert(err == MPOOL_SUCCESS);
+
+	for (int i = 0; i < 200; i++) {
+		struct test_struct* data;
+		data = (struct test_struct*) mpool_alloc(pool, &err);
+		assert(err == MPOOL_SUCCESS);
+		data_arr[i] = data;
+		init_struct(data_arr[i], i);
+	}
+
+
+	for (int i = 0; i < 200; i++) {
+		struct test_struct* ts = data_arr[i];
+		assert(ts->field1 == i);
+		assert(ts->field2 == i);
 	}
 
 	free_mpool(pool);
