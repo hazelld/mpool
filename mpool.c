@@ -160,7 +160,7 @@ mpool_error _partition_blob (struct mpool* pool, int index)
 		/* Because void* pointer arithmatic is undefined, have to cast 
 		 * to a complete type, then back to void* 
 		 */
-		void* ptr = (void*)((char*) pool->blobs[i] + index);
+		void* ptr = (void*)((char*) pool->blobs[index] + i);
 		struct _block* new_block = NULL;
 		mpool_error err = _create_block(ptr, &new_block);
 		if (err != MPOOL_SUCCESS) return err;
@@ -200,8 +200,8 @@ mpool_error init_mpool (size_t block_size, int32_t capacity, struct mpool** pool
 	(*pool)->blobs[0] = malloc(block_size * capacity);
 	(*pool)->blob_sizes = malloc(sizeof(size_t));
 	(*pool)->blob_sizes[0] = block_size * capacity;
-	mpool_error err = _partition_blob(*pool, (*pool)->alloc_count);
-	return MPOOL_SUCCESS;
+	mpool_error err = _partition_blob(*pool, (*pool)->alloc_count - 1);
+	return err;
 }
 
 
