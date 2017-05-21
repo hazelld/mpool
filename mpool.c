@@ -155,7 +155,7 @@ static mpool_error _remove_block (struct _block** block, struct mpool* pool)
 
 mpool_error _partition_blob (struct mpool* pool, int index)
 {	
-	for (int i = 0; i < pool->blob_sizes[index]; i += pool->block_size) {
+	for (size_t i = 0; i < pool->blob_sizes[index]; i += pool->block_size) {
 		
 		/* Because void* pointer arithmatic is undefined, have to cast 
 		 * to a complete type, then back to void* 
@@ -209,7 +209,8 @@ void* mpool_alloc (struct mpool* pool, mpool_error* error)
 {
 	struct _block* b;
 	mpool_error err = MPOOL_SUCCESS;
-	
+	void* item = NULL;
+
 	if (pool == NULL) {
 		err = MPOOL_ERR_NULL_ARG;
 		goto cleanup;
@@ -218,7 +219,7 @@ void* mpool_alloc (struct mpool* pool, mpool_error* error)
 	if ((err = _remove_block(&b, pool)) != MPOOL_SUCCESS) 
 		goto cleanup;
 	
-	void* item = b->addr;
+	item = b->addr;
 	err = _add_to_unused_list(b, pool);
 
 cleanup:
@@ -231,8 +232,8 @@ cleanup:
 
 mpool_error mpool_dealloc (void* item, struct mpool* pool) 
 {
-	struct _block* b;
-	mpool_error err = MPOOL_SUCCESS;
+	struct _block* b = NULL;
+ 	mpool_error err = MPOOL_SUCCESS;
 
 	if (item == NULL || pool == NULL) 
 		return MPOOL_ERR_NULL_ARG;
@@ -278,6 +279,9 @@ mpool_error mpool_realloc (int32_t new_capacity, struct mpool* pool)
 
 mpool_error free_mpool (struct mpool* pool)
 {
+	if (pool == NULL)
+		return MPOOL_ERR_NULL_ARG;
+
 	struct _block* buff;
 	struct _block* b = pool->block_list;
 	
@@ -299,4 +303,5 @@ mpool_error free_mpool (struct mpool* pool)
 	free(pool->blobs);
 	free(pool->blob_sizes);
 	free(pool);
+	return MPOOL_SUCCESS;
 }
