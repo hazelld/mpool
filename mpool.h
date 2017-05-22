@@ -50,18 +50,18 @@
 
 /* mpool_error: Various error codes returned by the functions.
  *	
- * For full documentation of what each code means, see the README.md.
+ * For full documentation of what each code means, see the README.md, and 
+ * to print the error messages to file stream, see print_mpool_error()
  */
 typedef enum mpool_error {
 	MPOOL_SUCCESS = 0,
 	MPOOL_FAILURE,
 	MPOOL_ERR_ALLOC,
-	MPOOL_ERR_INVALID_SIZE,
 	MPOOL_ERR_NULL_ARG,
 	MPOOL_ERR_MUTEX,
 	MPOOL_ERR_INVALID_REALLOC_SIZE,
-	MPOOL_FULL_LIST,
-	MPOOL_EMPTY_LIST,
+	MPOOL_FULL_POOL,
+	MPOOL_EMPTY_POOL,
 } mpool_error;
 
 
@@ -199,3 +199,14 @@ int32_t mpool_capacity (struct mpool* pool);
 mpool_error free_mpool (struct mpool* pool);
 
 
+/**
+ * print_mpool_error() - Print the error message associated with error code
+ * @fh: File handle to print error too
+ * @message: Optional message to print prior to error string
+ * @err: Error code
+ *
+ * Note if you don't want to add optional message, simply pass NULL as the arg
+ * for message. However fh _can't_ be NULL or this function returns without
+ * doing anything.
+ */
+void print_mpool_error(FILE* fh, char* message, mpool_error err);

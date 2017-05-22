@@ -130,7 +130,7 @@ static mpool_error _remove_block_list (struct _block** block, struct _block** li
 	if (block == NULL || list == NULL)
 		return MPOOL_ERR_NULL_ARG;
 	if (*list == NULL)
-		return MPOOL_EMPTY_LIST;
+		return MPOOL_EMPTY_POOL;
 
 	*block = *list;
 	*list = (*block)->next;
@@ -252,7 +252,7 @@ static mpool_error _create_block (void* addr, struct _block** block)
 static mpool_error _add_block (struct _block* new_block, struct mpool* pool) 
 {
 	if (pool->block_list_size + 1 > pool->capacity)
-		return MPOOL_FULL_LIST;
+		return MPOOL_FULL_POOL;
 
 #ifdef MULTITHREAD
 	if (MUTEX_LOCK(&pool->block_list_mutex) != 0)
@@ -283,7 +283,7 @@ static mpool_error _remove_block (struct _block** block, struct mpool* pool)
 		return MPOOL_ERR_NULL_ARG;
 
 	if (pool->block_list == NULL)
-		return MPOOL_EMPTY_LIST;
+		return MPOOL_EMPTY_POOL;
 
 #ifdef MULTITHREAD
 	if (MUTEX_LOCK(&pool->block_list_mutex) != 0)
@@ -474,4 +474,29 @@ mpool_error free_mpool (struct mpool* pool)
 	free(pool->blob_sizes);
 	free(pool);
 	return MPOOL_SUCCESS;
+}
+
+struct _errorstr {
+	mpool_error err;
+	char* message;
+} errorstr[] = {
+	{ MPOOL_SUCCESS, "No error" },
+	{ MPOOL_FAILURE, "Generic Failure" },
+	{ MPOOL_ERR_ALLOC, "malloc() failed to allocate memory" },
+	{ MPOOL_ERR_NULL_ARG, "NULL arg sent to function" },
+	{ MPOOL_ERR_MUTEX, "Mutex operation failed" },
+	{ MPOOL_ERR_INVALID_REALLOC_SIZE, "Can't realloc to given size" },
+	{ MPOOL_FULL_POOL,"Memory pool is full, mpool_dealloc() called more times \
+	than mpool_alloc() was called."},
+	{ MPOOL_EMPTY_POOL, "Memory pool is empty, all available memory has been \
+		given out" },
+};
+
+void print_mpool_error(FILE* fh, char* message, mpool_error err)
+{
+	if (fh == NULL) return;
+
+	if (message != NULL) 
+		fprintf(fh, "%s: ", message);
+	fprintf(fh, "%s\n", errorstr[err].message);
 }
