@@ -28,6 +28,18 @@
 
 #include "mpool.h"
 
+/* Defining some terminology used throughout the program:
+ *
+ * blob -> A blob of memory is just the large contiguous block of memory that 
+ * has been allocated from the kernel. This occurs when the user initializes 
+ * the pool, or reallocs the size. It is equal to block_size * capacity.
+ *
+ * block -> A block of memory that is within the blob, and is equal in size to 
+ * what the user has given (init_mpool() -> @block_size). 
+ *
+ */
+
+
 /**
  * struct _block - Linked list holding all the blocks of memory.
  * 
@@ -99,6 +111,20 @@ struct mpool {
 #endif
 };
 
+
+/**
+ * _remove_block_list - Remove the first item of list and return it
+ * @block: Where to put the removed struct _block
+ * @list: Pointer to the first node of list
+ *
+ * This function removes the first element of any list, and points the value 
+ * of *@block to the removed item. Since we are removing the head node, and 
+ * there is no seperate structure for the head node, we need a pointer to it, 
+ * as it will change.
+ *
+ * Note that since multiple lists use this function, and each has their own 
+ * mutex's, these must be locked prior to calling this function. 
+ */
 static mpool_error _remove_block_list (struct _block** block, struct _block** list) 
 {
 	if (block == NULL || list == NULL)
@@ -111,6 +137,17 @@ static mpool_error _remove_block_list (struct _block** block, struct _block** li
 	return MPOOL_SUCCESS; 
 }
 
+
+/**
+ * _insert_block_list - Insert a _block into the head of the list
+ * @block: Block to insert
+ * @list: List to insert into
+ *
+ * This function inserts a _block into the front of the list. It functions much
+ * like _remove_block_list() in that it needs a pointer to list head pointer, 
+ * and also the relevant mutex's must be locked prior to calling the function.
+ *
+ */
 static mpool_error _insert_block_list ( struct _block* block, struct _block** list)
 {
 	if (block == NULL || list == NULL)
@@ -122,6 +159,18 @@ static mpool_error _insert_block_list ( struct _block* block, struct _block** li
 }
 
 
+/**
+ * _add_to_unused_list() - Adds a _block into the list of unused _blocks
+ * @new_block: Block to add into list
+ * @pool: struct mpool* that holds the relevant list
+ *
+ * This function is used to move a _block into the unused list. The unused list
+ * holds all the _blocks that currently are not holding memory addresses from 
+ * the pool. This happens when the user calls mpool_alloc(); the address the 
+ * _block holds is returned, then the _block is placed into this list. We hold 
+ * these as it doesn't make sense to free/malloc each time as the whole point
+ * of the library is to cut down on the free/mallocs.
+ */
 static mpool_error _add_to_unused_list(struct _block* new_block, struct mpool* pool) 
 {
 
@@ -143,6 +192,17 @@ static mpool_error _add_to_unused_list(struct _block* new_block, struct mpool* p
 	return MPOOL_SUCCESS;
 }
 
+
+/**
+ * _remove_from_unused_list() - Remove a _block from the unused list of the pool
+ * @block: Location of where to place the struct _block*
+ * @pool: struct mpool* that holds the relevant list.
+ *
+ * This function removes a _block from the unused list so it may be used again.
+ * This occurs when a user calls mpool_dealloc() and the address they pass in
+ * is then placed into the block returned from this function and put into the 
+ * block_list.
+ */
 static mpool_error _remove_from_unused_list(struct _block** block, struct mpool* pool)
 {
 
@@ -164,6 +224,11 @@ static mpool_error _remove_from_unused_list(struct _block** block, struct mpool*
 }
 
 
+/**
+ * _create_block() - Initialize a struct _block 
+ * @addr: Address to hold in the struct _block
+ * @block: Where to put the allocated block
+ */
 static mpool_error _create_block (void* addr, struct _block** block) 
 {
 	if (addr == NULL || block == NULL)
@@ -179,6 +244,11 @@ static mpool_error _create_block (void* addr, struct _block** block)
 	return MPOOL_SUCCESS;
 }
 
+/**
+ * _add_block() - Add a block to the pool's block_list
+ * @new_block: Block to add to the list
+ * @pool: struct mpool* that holds the block_list
+ */
 static mpool_error _add_block (struct _block* new_block, struct mpool* pool) 
 {
 	if (pool->block_list_size + 1 > pool->capacity)
@@ -201,6 +271,12 @@ static mpool_error _add_block (struct _block* new_block, struct mpool* pool)
 	return err;
 }
 
+
+/**
+ * _remove_block - Remove a block from the pool's block_list
+ * @block: Location of where to put _block removed from list
+ * @pool: struct mpool* that holds the block_list
+ */
 static mpool_error _remove_block (struct _block** block, struct mpool* pool) 
 {
 	if (block == NULL || pool == NULL)
@@ -226,6 +302,15 @@ static mpool_error _remove_block (struct _block** block, struct mpool* pool)
 	return err;
 }
 
+
+/**
+ * _partition_blob - Split the blob of memory into list of blocks
+ * @pool: struct mpool* that holds the raw blob
+ * @index: Index of which blob should be partitioned from the @blobs[] array
+ *
+ * This function converts a raw chunk of allocated memory into a linked list 
+ * of _blocks that each hold a pointer to a location within the blob.
+ */
 mpool_error _partition_blob (struct mpool* pool, int index)
 {	
 	for (size_t i = 0; i < pool->blob_sizes[index]; i += pool->block_size) {
