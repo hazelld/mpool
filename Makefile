@@ -10,7 +10,10 @@ ${TARGET}: mpool.o
 mpool.o: mpool.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+test: multi-thread-test.c mpool.c
+	$(CC) -Wall -Wextra -g $^ -o $@ -lpthread
+
 
 .PHONY: clean
 clean:
-	rm -f $(TARGET) mpool.o
+	rm -f $(TARGET) mpool.o test
