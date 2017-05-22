@@ -104,15 +104,26 @@ int main(void)
 	for (int i = 0; i < max_items / 4; i++) {
 		printf("Checking %d / %d\n", i, max_items / 4);
 
-		if (check_and_add(items1[i]) != 0) 
+		if (check_and_add(items1[i]) != 0) {
 			printf("Found match!! -- items1[%d] == %p\n", i, items1[i]);
-		if (check_and_add(items2[i]) != 0) 
+			goto done;
+		}
+		if (check_and_add(items2[i]) != 0) {
 			printf("Found match!! -- items2[%d] == %p\n", i, items2[i]);
-		if (check_and_add(items3[i]) != 0) 
+			goto done;
+		}
+		if (check_and_add(items3[i]) != 0) {
 			printf("Found match!! -- items3[%d] == %p\n", i, items3[i]);
-		if (check_and_add(items4[i]) != 0) 
+			goto done;
+		}
+		if (check_and_add(items4[i]) != 0) {
 			printf("Found match!! -- items4[%d] == %p\n", i, items4[i]);
+			goto done;
+		}
 	
 	}
+
+	printf("No matches found -- Success\n");
+done:
 	free_mpool(pool);
 }
