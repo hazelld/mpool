@@ -3,6 +3,10 @@
  *
  * Copyright (c) 2017 William Hazell
  * 
+ * Author: William Hazell
+ * Date: 05/2017
+ * Contact: liam.hazell@gmail.com
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
@@ -352,6 +356,11 @@ mpool_error mpool_realloc (int32_t new_capacity, struct mpool* pool)
 	return err;
 }
 
+int32_t mpool_capacity (struct mpool* pool) 
+{
+	if (pool == NULL) return -1;
+	return pool->capacity;
+}
 
 mpool_error free_mpool (struct mpool* pool)
 {
