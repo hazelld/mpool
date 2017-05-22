@@ -1,5 +1,6 @@
 # mpool
-Small memory pool library for allocating fixed size amounts of memory across threads. 
+Small memory pool library for allocating fixed size amounts of memory across threads. This library is still in it's infancy and
+may be prone to errors.
 
 ## Why?
 This pool works by allocating a large pool of memory once, then distributing chunks of this memory when requested.
@@ -27,7 +28,7 @@ err = init_mpool(sizeof(int), 8, &pool);
 /* Check error value */ 
 ```  
   
-## mpool_alloc()  
+### mpool_alloc()  
 ```void* mpool_alloc (struct mpool* pool, mpool_error* err); ```  
 
 This function is used to allocate a block of memory from the pool. Note that the `mpool_error` is passed by reference,
@@ -43,7 +44,7 @@ int* i = (int*) mpool_alloc(pool, &err);
 /* Do stuff with *i */
 ```    
   
-## mpool_dealloc()  
+### mpool_dealloc()  
 ```mpool_error mpool_dealloc (void* item, struct mpool* pool); ```  
   
 This function is used to dealloc a block of memory that was allocated with `mpool_alloc()`. Currently there is no checks
@@ -55,4 +56,46 @@ example usage would look like this (assume the variables from the above example 
 err = mpool_dealloc(i, pool);
 /* Check error value */
 ```  
+ 
+### mpool_realloc()  
+```mpool_error mpool_realloc (int32_t new_capacity, struct mpool* pool); ```  
   
+This function is used to increase the amount of blocks the pool can hold. The `new_capacity` _must_ be greater than the 
+current capacity. It doesn't take the amount of blocks you want to add, rather the total amount of blocks the pool should 
+have (much like `realloc()`). This function should be generally avoided, as it defeats the purpose of allocating all the 
+memory upfront if you end up having to allocate more later. An example useage would look like this:   
+
+```.c
+err = mpool_realloc(16, pool);
+/* check error value */
+```  
+
+However, generally it is easiest to use in conjunction with the next function.  
+  
+### mpool_capacity()   
+```int32_t mpool_capacity(struct mpool* pool);```  
+  
+This function returns the current capacity of the pool. It's main purpose is for adding more items with realloc like so:  
+   
+```.c
+err = mpool_realloc(mpool_capacity(pool) + 5, pool); // Allocate 5 extra blocks  
+/* check error value */
+```  
+
+### free_mpool()  
+```mpool_error free_mpool (struct mpool* pool); ```  
+  
+This function is used to free all memory associated with the `struct mpool`. It should be called whenever the user is finished
+with __all__ memory that was allocated from it. Note that once this is called, any memory that was allocated from this 
+structure will be freed.  
+  
+## Error Codes (mpool_error)  
+These are the error codes that may be returned from the functions and the associated meanings.  
+- __MPOOL_SUCCESS__: Everything worked   
+- __MPOOL_FAILURE__: Generic Failure  
+- __MPOOL_ERR_ALLOC__: Failed to allocate memory with malloc(). Generally really bad.  
+- __MPOOL_ERR_NULL_ARG__: One of the arguments sent to the function was `NULL`    
+- __MPOOL_ERR_MUTEX__: One of the functions with the mutex failed    
+- __MPOOL_ERR_INVALID_REALLOC_SIZE__: Invalid value sent to `mpool_realloc()` it must be new_capacity > old_capacity  
+- __MPOOL_FULL_POOL__: Called `mpool_dealloc()` more times than you have called `mpool_alloc()`    
+- __MPOOL_EMPTY_POOL__: No more space left in pool to allocate from. Get more with `mpool_realloc()`  
