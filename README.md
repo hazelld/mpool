@@ -12,7 +12,7 @@ applications where there are a large amount of threads that all need a certain d
 To use this library, simply include mpool.c and mpool.h into the project. Should you want a .so file, simply run `make`.  
    
 ## API  
-The API is very small, consisting of only 6 functions. There are also a few error codes that will be outlined.   
+The API is very small, consisting of only 7 functions. There are also a few error codes that will be outlined.   
 
 ### init_mpool()  
 ```mpool_error init_mpool (size_t block_size, int32_t capacity, struct mpool** pool);```  
@@ -88,6 +88,19 @@ err = mpool_realloc(mpool_capacity(pool) + 5, pool); // Allocate 5 extra blocks
 This function is used to free all memory associated with the `struct mpool`. It should be called whenever the user is finished
 with __all__ memory that was allocated from it. Note that once this is called, any memory that was allocated from this 
 structure will be freed.  
+  
+### print_mpool_error()  
+```void print_mpool_error(FILE* fh, char* message, mpool_error err);```  
+  
+This function prints out a plain text error string that corresponds to given error code, to the given file stream. You may
+also add an optional message to be prepended to the error string. If you don't want too, simply call with `NULL` as the 
+message argument. Example usage:  
+  
+```.c
+mpool_error err = MPOOL_SUCCESS;
+print_mpool_error(stdout, NULL, err); // Prints "No Error"  
+print_mpool_error(stdout, "Line 10", err); //Prints "Line 10: No Error"
+```
   
 ## Error Codes (mpool_error)  
 These are the error codes that may be returned from the functions and the associated meanings.  
