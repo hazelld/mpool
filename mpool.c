@@ -311,7 +311,7 @@ static mpool_error _remove_block (struct _block** block, struct mpool* pool)
  * This function converts a raw chunk of allocated memory into a linked list 
  * of _blocks that each hold a pointer to a location within the blob.
  */
-mpool_error _partition_blob (struct mpool* pool, int index)
+static mpool_error _partition_blob (struct mpool* pool, int index)
 {	
 	for (size_t i = 0; i < pool->blob_sizes[index]; i += pool->block_size) {
 		
@@ -476,7 +476,8 @@ mpool_error free_mpool (struct mpool* pool)
 	return MPOOL_SUCCESS;
 }
 
-struct _errorstr {
+
+static struct _errorstr {
 	mpool_error err;
 	char* message;
 } errorstr[] = {
