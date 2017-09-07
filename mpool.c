@@ -39,6 +39,9 @@
  *
  */
 
+/* Used internally to determine whether the pool is safe/unsafe */
+#define SAFE 1
+#define UNSAFE 0
 
 /**
  * struct _block - Linked list holding all the blocks of memory.
@@ -79,7 +82,9 @@ struct _block {
  * @alloc_count: How many times memory has been alloc'd (size of blobs array)
  * @block_list_mutex: Holds the lock to @block_list
  * @unused_block_list_mutex: Holds the lock to @unused_block_list
- *
+ * @allocd_items: Array that holds the allocated addresses for verification
+ * @safe_mode: Holds whether the pool is safe/unsafe (see SAFE/UNSAFE defn for 
+ * the reason for this)
  *
  * 	This structure holds all the needed information for the pool to function.
  * 	When the user uses init_mpool() or mpool_realloc() and memory is needed 
@@ -105,11 +110,17 @@ struct mpool {
 	size_t* blob_sizes;
 	int alloc_count;
 	
+	void** allocd_addr;
+	int index;
+
+	int safe_mode;
 #ifdef MULTITHREAD
 	LOCK_TYPE block_list_mutex;
 	LOCK_TYPE unused_block_list_mutex;
 #endif
 };
+
+
 
 
 /**
@@ -319,6 +330,10 @@ static mpool_error _partition_blob (struct mpool* pool, int index)
 		 * to a complete type, then back to void* 
 		 */
 		void* ptr = (void*)((char*) pool->blobs[index] + i);
+
+		/* Add the address to the array of held pointers */
+		pool->allocd_addr[pool->index++] = ptr; 
+		
 		struct _block* new_block = NULL;
 		mpool_error err = _create_block(ptr, &new_block);
 		if (err != MPOOL_SUCCESS) return err;
@@ -350,6 +365,10 @@ mpool_error init_mpool (size_t block_size, int32_t capacity, struct mpool** pool
 	(*pool)->block_size = block_size;
 	(*pool)->capacity = capacity;
 	
+	/* Safe-mode turned off by default */
+	(*pool)->safe_mode = UNSAFE;
+	(*pool)->allocd_addr = malloc(sizeof(void*) * capacity);
+
 #ifdef MULTITHREAD
 	if (MUTEX_INIT(&(*pool)->block_list_mutex, NULL) != 0)
 			return MPOOL_ERR_MUTEX;
@@ -386,7 +405,7 @@ void* mpool_alloc (struct mpool* pool, mpool_error* error)
 	
 	item = b->addr;
 	err = _add_to_unused_list(b, pool);
-
+	
 cleanup:
 	if (error != NULL)
 		*error = err;
@@ -402,7 +421,27 @@ mpool_error mpool_dealloc (void* item, struct mpool* pool)
 
 	if (item == NULL || pool == NULL) 
 		return MPOOL_ERR_NULL_ARG;
-	
+
+	/* 
+	 * If safe mode is ON, check to make sure the address being passed back was
+	 * one that was created by the pool. 
+	 *
+	 * TODO: Can this be done safely by checking if item's address is within 
+	 * the start of the blob + pool size? That would cut down on the loop
+	 */
+	int match = 0;
+	if (pool->safe_mode == SAFE) {
+		
+		for (int i = 0; i < pool->index; i++) {
+			if (item == pool->allocd_addr[i]) {
+				match = 1;
+				break;
+			}
+		}
+
+		if (match != 1) { return MPOOL_ERR_INVALID_ADDRESS; }
+	}
+
 	if ((err = _remove_from_unused_list(&b, pool)) != MPOOL_SUCCESS) 
 		return err;
 	
@@ -435,7 +474,8 @@ mpool_error mpool_realloc (int32_t new_capacity, struct mpool* pool)
 
 	pool->blob_sizes = realloc(pool->blob_sizes, sizeof(size_t) * pool->alloc_count);
 	if (pool->blob_sizes == NULL) return MPOOL_ERR_ALLOC;
-
+	
+	pool->allocd_addr = realloc(pool->allocd_addr, sizeof(void*) * (pool->index + new_capacity));
 	pool->blob_sizes[index] = new_size;
 	err = _partition_blob(pool, index);
 	return err;
@@ -472,8 +512,27 @@ mpool_error free_mpool (struct mpool* pool)
 		free(pool->blobs[i]);
 	free(pool->blobs);
 	free(pool->blob_sizes);
+	free(pool->allocd_addr);
 	free(pool);
 	return MPOOL_SUCCESS;
+}
+
+
+mpool_error set_safe_mode(struct mpool* pool) 
+{
+	if (pool == NULL)
+		return MPOOL_ERR_NULL_ARG;
+
+	pool->safe_mode = SAFE;
+	return MPOOL_SUCCESS;
+}
+
+
+int32_t get_safe_mode(struct mpool* pool) 
+{
+	if (pool == NULL)
+		return -1;
+	return pool->safe_mode;
 }
 
 
@@ -484,6 +543,7 @@ static struct _errorstr {
 	{ MPOOL_SUCCESS, "No error" },
 	{ MPOOL_FAILURE, "Generic Failure" },
 	{ MPOOL_ERR_ALLOC, "malloc() failed to allocate memory" },
+	{ MPOOL_ERR_INVALID_ADDRESS, "Tried to return address to pool that pool did not create" },
 	{ MPOOL_ERR_NULL_ARG, "NULL arg sent to function" },
 	{ MPOOL_ERR_MUTEX, "Mutex operation failed" },
 	{ MPOOL_ERR_INVALID_REALLOC_SIZE, "Can't realloc to given size" },

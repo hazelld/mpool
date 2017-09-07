@@ -22,6 +22,7 @@ int main(void)
 	mpool_error err;
 
 	err = init_mpool(sizeof(struct test_struct), 100, &pool);
+	//set_safe_mode(pool);
 	assert(err == MPOOL_SUCCESS);
 
 	for (int i = 0; i < 50; i++) {
@@ -50,7 +51,9 @@ int main(void)
 	}
 
 	for (int i = 0; i < 100; i++) {
+		printf("%d---\n", i);
 		err = mpool_dealloc(data_arr[i], pool);
+		print_mpool_error(stdout, "Deallocing: ", err);
 		assert(err == MPOOL_SUCCESS);
 	}
 
@@ -65,14 +68,17 @@ int main(void)
 		data_arr[i] = data;
 		init_struct(data_arr[i], i);
 	}
-
+	
 
 	for (int i = 0; i < 200; i++) {
 		struct test_struct* ts = data_arr[i];
 		assert(ts->field1 == i);
 		assert(ts->field2 == i);
 	}
-
+	
+	printf("Trying to get error:\n");
+	err = mpool_dealloc( (void*)10000, pool);
+	print_mpool_error(stdout, "Got: ", err);
 	free_mpool(pool);
 
 }

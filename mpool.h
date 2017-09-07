@@ -47,6 +47,9 @@
 
 #define MPOOL_MAJOR_VERSION 0
 #define MPOOL_MINOR_VERSION 1
+#define MPOOL_REV_VERSION 2
+#define MPOOL_VERSION "0.1.2" 
+
 
 /* mpool_error: Various error codes returned by the functions.
  *	
@@ -57,6 +60,7 @@ typedef enum mpool_error {
 	MPOOL_SUCCESS = 0,
 	MPOOL_FAILURE,
 	MPOOL_ERR_ALLOC,
+	MPOOL_ERR_INVALID_ADDRESS,
 	MPOOL_ERR_NULL_ARG,
 	MPOOL_ERR_MUTEX,
 	MPOOL_ERR_INVALID_REALLOC_SIZE,
@@ -198,6 +202,40 @@ int32_t mpool_capacity (struct mpool* pool);
  */
 mpool_error free_mpool (struct mpool* pool);
 
+
+/**
+ * set_safe_mode() - Turn safe mode on at a loss of performance.
+ *
+ *
+ * 	Each pool has a safe/unsafe mode. When safe mode is turned on using this
+ * 	function, some checks are perfomed to try and prevent some issues from 
+ * 	happening. These checks affect performance, so by default the pool is in
+ * 	unsafe mode. Note that by 'unsafe' it really means 'works as expected unless
+ * 	you try to do something with the pool'. 'Safe' mode is really 'Prevent 
+ * 	programmer from doing silly things'. 
+ *
+ * 	The list of checks to be done will grow as I have more ideas but for now
+ * 	it is:
+ *
+ * 	- Check that memory handed back to the pool with mpool_dealloc() was an 
+ * 	  address that the pool had given out. This is to prevent you from handing 
+ * 	  back memory that the pool can't garuntee will still be valid. However, 
+ * 	  once you add it back to the pool, the pool will then hand this memory 
+ * 	  back out. When safe mode is on, you can garuntee that mpool_alloc() will
+ * 	  _always_ return a valid address from the pool.
+ *
+ */
+mpool_error set_safe_mode(struct mpool* pool);
+
+/**
+ * get_safe_mode() - Returns whether safe mode is on/off for the given mpool
+ *
+ * Returns:
+ * 	-1=> Invalid struct mpool
+ * 	0 => Safe mode is disabled
+ * 	1 => Safe mode is active
+ */
+int32_t get_safe_mode(struct mpool* pool);
 
 /**
  * print_mpool_error() - Print the error message associated with error code

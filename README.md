@@ -12,7 +12,7 @@ applications where there are a large amount of threads that all need a certain d
 To use this library, simply include mpool.c and mpool.h into the project. Should you want a .so file, simply run `make`.  
    
 ## API  
-The API is very small, consisting of only 7 functions. There are also a few error codes that will be outlined.   
+The API is very small, consisting of only 7 (main) functions. There are also a few error codes that will be outlined.   
 
 ### init_mpool()  
 ```mpool_error init_mpool (size_t block_size, int32_t capacity, struct mpool** pool);```  
@@ -101,6 +101,21 @@ mpool_error err = MPOOL_SUCCESS;
 print_mpool_error(stdout, NULL, err); // Prints "No Error"  
 print_mpool_error(stdout, "Line 10", err); //Prints "Line 10: No Error"
 ```
+
+## Safe Mode  
+As of version `0.1.2` there is now a 'safe' mode that may be activated on the pool. By activating this, some checks will 
+be done to prevent someone using the library from making mistakes, at the cost of performance. Currently, there is 
+only the one check, but more will be added in later versions.   
+
+The current check being done is too ensure that memory passed back into the pool is valid memory that came
+out of the pool. With safe mode off, you are able to 'dealloc' any memory address. Once dealloc'd, you may 
+then get this address when you alloc. This means you could end up with an invalid address.   
+
+The API for safe mode are the two following functions:   
+
+```int32_t get_safe_mode(struct mpool* pool); // Returns 0 -> Safe Mode OFF, 1 -> Safe Mode ON ```   
+
+```mpool_error set_safe_mode(struct mpool* pool); // Turn on safe mode```
   
 ## Error Codes (mpool_error)  
 These are the error codes that may be returned from the functions and the associated meanings.  
