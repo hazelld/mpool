@@ -30,7 +30,8 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-#include <stdio.h> // temp
+#include <string.h>
+#include <stdio.h>
 
 #ifdef _WIN32
 #	warn No multi-threaded support currently
@@ -47,8 +48,8 @@
 
 #define MPOOL_MAJOR_VERSION 0
 #define MPOOL_MINOR_VERSION 1
-#define MPOOL_REV_VERSION 2
-#define MPOOL_VERSION "0.1.2" 
+#define MPOOL_REV_VERSION 3
+#define MPOOL_VERSION "0.1.3" 
 
 
 /* mpool_error: Various error codes returned by the functions.
@@ -137,6 +138,18 @@ mpool_error init_mpool (size_t block_size, int32_t capacity, struct mpool** pool
  */
 void* mpool_alloc (struct mpool* pool, mpool_error* error);
 
+
+/**
+ * mpool_calloc() - Get a chunk of memory that holds all 0s
+ *
+ * @pool: Pool structure that has been init with init_mpool()
+ * @error: The resulting error code from function 
+ *
+ * This function is a small wrapper around the mpool_alloc() function that
+ * garuntees the memory will be 0'd out.
+ *
+ */
+void* mpool_calloc (struct mpool* pool, mpool_error* error);
 
 /**
  * mpool_dealloc() - Return a piece of memory to the pool.

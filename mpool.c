@@ -413,6 +413,17 @@ cleanup:
 	return item;
 }
 
+void* mpool_calloc (struct mpool* pool, mpool_error* error) 
+{
+	void* item = mpool_alloc(pool, error);
+
+	if (*error != MPOOL_SUCCESS || item == NULL) {
+		return NULL;
+	}
+
+	memset(item, 0, pool->block_size);
+	return item;
+}
 
 mpool_error mpool_dealloc (void* item, struct mpool* pool) 
 {
